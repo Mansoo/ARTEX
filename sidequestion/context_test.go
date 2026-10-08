@@ -277,7 +277,7 @@ func TestSideTwentyLongRepliesRespectSmallWindow(t *testing.T) {
 	}
 	calls := 0
 	p := fakeProvider{complete: func(_ context.Context, req llm.CompletionRequest) (llm.Message, string, llm.Usage, error) {
-		if EstimateInputTokens(req)+req.MaxTokens > 32000 {
+		if EstimateInputTokens(req)+req.MaxTokens > 36000 {
 			t.Fatal("request exceeds small model window")
 		}
 		if req.Thinking == "disabled" {
@@ -287,7 +287,7 @@ func TestSideTwentyLongRepliesRespectSmallWindow(t *testing.T) {
 		return assistant("answer"), "end_turn", llm.Usage{}, nil
 	}}
 	var memory Memory
-	_, info, err := (SideQuestionService{p}).Respond(t.Context(), Snapshot{Request: fixture(), Model: Model{WindowTokens: 32000}}, "current status?", replayFixture(history, &memory), ContextOptions{}, nil)
+	_, info, err := (SideQuestionService{p}).Respond(t.Context(), Snapshot{Request: fixture(), Model: Model{WindowTokens: 36000}}, "current status?", replayFixture(history, &memory), ContextOptions{}, nil)
 	if err != nil || !info.HistorySummarized || calls > 12 || memory.Through != 20 {
 		t.Fatalf("20 long replies: calls=%d info=%+v memory=%+v err=%v", calls, info, memory, err)
 	}
@@ -305,7 +305,7 @@ func TestSideOverflowWithoutReductionDoesNotRepeatAnswer(t *testing.T) {
 	}}
 	snapshot := Snapshot{Request: llm.CompletionRequest{MaxTokens: 128, Messages: []llm.Message{llm.UserText("tiny")}}}
 	out, _, err := (SideQuestionService{p}).Respond(t.Context(), snapshot, "question", Replay{}, ContextOptions{}, nil)
-	if err == nil || !strings.Contains(err.Error(), "未能进一步缩减") || answers != 1 || summaries != 1 || out.Usage.InputTokens != 8 {
+	if err == nil || !strings.Contains(err.Error(), "더 이상 줄이지 못하여") || answers != 1 || summaries != 1 || out.Usage.InputTokens != 8 {
 		t.Fatalf("no-progress recovery: %d %d %+v %v", answers, summaries, out, err)
 	}
 }

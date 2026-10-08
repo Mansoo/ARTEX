@@ -184,7 +184,7 @@ func (d *DB) CreateTaskWithOptions(description, goal string, opts TaskCreateOpti
 	// is global and shared, not isolated per task). Being a fact (not a special 'begin' kind) lets every
 	// intent uniformly connect to a fact node, including the first ones.
 	originPayload, _ := json.Marshal(map[string]any{
-		"summary":     "任务起点：" + description + "；目标：" + goal,
+		"summary":     "작업 시작점: " + description + "; 목표: " + goal,
 		"description": description,
 		"goal":        goal,
 	})
@@ -267,7 +267,7 @@ WITH requested(company_id, position) AS (
     FROM unnest($2::bigint[]) WITH ORDINALITY AS requested(company_id, position)
 ), inserted AS (
     INSERT INTO task_scope(task_id, kind, company_id, source, reason)
-    SELECT $1, 'company', companies.id, 'manual', '任务创建时关联企业'
+    SELECT $1, 'company', companies.id, 'manual', '작업 생성 시 기업 연결'
     FROM requested
     JOIN companies ON companies.id=requested.company_id
     ORDER BY requested.position

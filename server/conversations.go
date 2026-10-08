@@ -30,7 +30,7 @@ func decodeConversationRequest(w http.ResponseWriter, r *http.Request, value any
 	if err := decode(r, value); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			writeErr(w, http.StatusRequestEntityTooLarge, "请求正文过大")
+			writeErr(w, http.StatusRequestEntityTooLarge, "요청 본문이 너무 큽니다")
 		} else {
 			writeErr(w, http.StatusBadRequest, err.Error())
 		}
@@ -85,11 +85,11 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 	}
 	req.AgentKey = strings.TrimSpace(req.AgentKey)
 	if req.AgentKey == "" {
-		writeErr(w, 400, "agent_key 不能为空")
+		writeErr(w, 400, "agent_key는 비워 둘 수 없습니다")
 		return
 	}
 	if utf8.RuneCountInString(req.AgentKey) > maxConversationAgentKeyRunes {
-		writeErr(w, 400, fmt.Sprintf("agent_key 最多 %d 个字符", maxConversationAgentKeyRunes))
+		writeErr(w, 400, fmt.Sprintf("agent_key는 최대 %d자입니다", maxConversationAgentKeyRunes))
 		return
 	}
 	a, err := pg.GetAgentByKey(req.AgentKey)
@@ -98,12 +98,12 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if a == nil {
-		writeErr(w, 404, "agent 不存在")
+		writeErr(w, 404, "agent가 존재하지 않습니다")
 		return
 	}
 	if req.LLMProfileID != nil {
 		if _, ok := s.loadProfileConfig(*req.LLMProfileID); !ok {
-			writeErr(w, 400, "指定的 LLM 配置不存在或未设置 API Key")
+			writeErr(w, 400, "지정한 LLM 설정이 존재하지 않거나 API Key가 설정되지 않았습니다")
 			return
 		}
 	}
@@ -112,7 +112,7 @@ func (s *Server) pgCreateConversation(w http.ResponseWriter, r *http.Request) {
 		title = "新对话"
 	}
 	if utf8.RuneCountInString(title) > maxConversationTitleRunes {
-		writeErr(w, 400, fmt.Sprintf("标题最多 %d 个字符", maxConversationTitleRunes))
+		writeErr(w, 400, fmt.Sprintf("제목은 최대 %d자입니다", maxConversationTitleRunes))
 		return
 	}
 	c, err := pg.CreateConversation(req.AgentKey, title, req.LLMProfileID)
@@ -136,7 +136,7 @@ func (s *Server) pgUpdateConversation(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.LLMProfileID != nil {
 		if _, ok := s.loadProfileConfig(*req.LLMProfileID); !ok {
-			writeErr(w, 400, "指定的 LLM 配置不存在或未设置 API Key")
+			writeErr(w, 400, "지정한 LLM 설정이 존재하지 않거나 API Key가 설정되지 않았습니다")
 			return
 		}
 	}
@@ -183,17 +183,17 @@ func (s *Server) pgRenameConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Title == nil && req.Pinned == nil {
-		writeErr(w, 400, "至少需要提供 title 或 pinned")
+		writeErr(w, 400, "title 또는 pinned 중 하나 이상을 제공해야 합니다")
 		return
 	}
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
 		if title == "" {
-			writeErr(w, 400, "标题不能为空")
+			writeErr(w, 400, "제목은 비워 둘 수 없습니다")
 			return
 		}
 		if utf8.RuneCountInString(title) > maxConversationTitleRunes {
-			writeErr(w, 400, fmt.Sprintf("标题最多 %d 个字符", maxConversationTitleRunes))
+			writeErr(w, 400, fmt.Sprintf("제목은 최대 %d자입니다", maxConversationTitleRunes))
 			return
 		}
 		req.Title = &title
@@ -260,7 +260,7 @@ func (s *Server) pgDeleteConversationsBatch(w http.ResponseWriter, r *http.Reque
 	seen := make(map[int64]struct{}, len(request.IDs))
 	for _, id := range request.IDs {
 		if id <= 0 {
-			writeErr(w, http.StatusBadRequest, "对话 id 无效")
+			writeErr(w, http.StatusBadRequest, "대화 id가 올바르지 않습니다")
 			return
 		}
 		if _, exists := seen[id]; exists {
@@ -270,7 +270,7 @@ func (s *Server) pgDeleteConversationsBatch(w http.ResponseWriter, r *http.Reque
 		ids = append(ids, id)
 	}
 	if len(ids) == 0 || len(ids) > maxConversationDeleteBatch {
-		writeErr(w, http.StatusBadRequest, fmt.Sprintf("ids 数量必须为 1-%d", maxConversationDeleteBatch))
+		writeErr(w, http.StatusBadRequest, fmt.Sprintf("ids 개수는 1-%d 범위여야 합니다", maxConversationDeleteBatch))
 		return
 	}
 	for _, id := range ids {
@@ -400,7 +400,7 @@ func (s *Server) pgSendConversationMessage(w http.ResponseWriter, r *http.Reques
 	}
 	msg := strings.TrimSpace(req.Message)
 	if msg == "" && len(req.Attachments) == 0 {
-		writeErr(w, 400, "消息不能为空")
+		writeErr(w, 400, "메시지는 비워 둘 수 없습니다")
 		return
 	}
 	agentMessage, ok := s.prepareChatMentionMessage(w, msg)
@@ -420,7 +420,7 @@ func (s *Server) pgSendConversationMessage(w http.ResponseWriter, r *http.Reques
 	s.chatMu.Lock()
 	if s.chatBusy[busyKey] {
 		s.chatMu.Unlock()
-		writeErr(w, 409, "该会话正在处理上一条消息，请稍候")
+		writeErr(w, 409, "이 대화가 이전 메시지를 처리 중입니다. 잠시 기다려 주세요")
 		return
 	}
 	s.chatBusy[busyKey] = true
@@ -443,7 +443,7 @@ func (s *Server) pgSendConversationMessage(w http.ResponseWriter, r *http.Reques
 	if c.Title == "" || c.Title == "新对话" {
 		title := firstLine(msg, 40)
 		if title == "" {
-			title = "附件消息"
+			title = "첨부 메시지"
 		}
 		_ = pg.RenameConversation(c.ID, title)
 	}
@@ -503,7 +503,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 	}()
 	// Only the first turn executes a historical retest. Follow-up conversation
 	// turns may explain the sealed result; the result tool refuses to overwrite it.
-	finishStatus, finishReason := "failed", "复测未能启动"
+	finishStatus, finishReason := "failed", "재검증을 시작하지 못했습니다"
 	if c.AgentKey == db.FindingRetestAgentKey {
 		// Read without the run cancellation so an immediate stop still seals pending.
 		r, err := s.m.pg.FindingRetestForConversation(context.Background(), c.ID)
@@ -511,7 +511,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 			// The sealing defer below needs r.ID, which we do not have here. Seal by
 			// conversation instead, otherwise the row stays 'pending' forever.
 			log.Printf("[conv %d] load retest: %v", c.ID, err)
-			if err := s.m.pg.FailPendingRetestForConversation(c.ID, "复测状态读取失败，请重新发起"); err != nil {
+			if err := s.m.pg.FailPendingRetestForConversation(c.ID, "재검증 상태를 읽지 못했습니다. 다시 시작하세요"); err != nil {
 				log.Printf("[conv %d] seal retest: %v", c.ID, err)
 			}
 			return
@@ -519,7 +519,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 		if r != nil && r.Status == "pending" {
 			defer func() {
 				if ctx.Err() != nil {
-					finishStatus, finishReason = "stopped", "复测已停止或服务已关闭"
+					finishStatus, finishReason = "stopped", "재검증이 중지되었거나 서비스가 종료되었습니다"
 				}
 				s.finishRetest(r.ID, finishStatus, finishReason)
 			}()
@@ -564,7 +564,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 		finishReason = err.Error()
 		if ctx.Err() == nil {
 			_, _ = pg.AppendConvActivity(c.ID, db.Activity{Worker: c.AgentKey, Kind: "text", IsError: true,
-				Summary: "（出错：" + err.Error() + "）", Detail: err.Error()})
+				Summary: "(오류: " + err.Error() + ")", Detail: err.Error()})
 		}
 	} else {
 		finishStatus, finishReason = "completed", ""
@@ -742,7 +742,7 @@ func mergeTriggeredRuns(items []triggeredRun) triggeredRun {
 	}
 	return triggeredRun{
 		agentKey:  first.agentKey,
-		title:     fmt.Sprintf("合并触发 · task#%d · %d 条", first.taskID, len(items)),
+		title:     fmt.Sprintf("병합 트리거 · task#%d · %d건", first.taskID, len(items)),
 		message:   b.String(),
 		taskID:    first.taskID,
 		mergeable: true,
@@ -784,7 +784,7 @@ func mergeAllRuns(items []triggeredRun) triggeredRun {
 	}
 	return triggeredRun{
 		agentKey:  first.agentKey,
-		title:     fmt.Sprintf("合并触发 · 全部 · %d 条", len(items)),
+		title:     fmt.Sprintf("병합 트리거 · 전체 · %d건", len(items)),
 		message:   b.String(),
 		taskID:    first.taskID,
 		mergeable: true,

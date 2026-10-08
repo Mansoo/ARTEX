@@ -1,13 +1,13 @@
 export const mentionKinds = [
-  { kind: "finding", label: "漏洞", alias: "finding" },
-  { kind: "asset", label: "资产", alias: "asset" },
-  { kind: "company", label: "企业", alias: "company" },
-  { kind: "endpoint", label: "接口", alias: "api" },
-  { kind: "ip", label: "IP", alias: "ip" },
-  { kind: "app", label: "应用", alias: "app" },
-  { kind: "root_domain", label: "域名", alias: "domain" },
-  { kind: "subdomain", label: "子域名", alias: "subdomain" },
-  { kind: "service", label: "服务", alias: "service" },
+  { kind: "finding", label: "漏洞", display: "취약점", alias: "finding" },
+  { kind: "asset", label: "资产", display: "자산", alias: "asset" },
+  { kind: "company", label: "企业", display: "기업", alias: "company" },
+  { kind: "endpoint", label: "接口", display: "API", alias: "api" },
+  { kind: "ip", label: "IP", display: "IP", alias: "ip" },
+  { kind: "app", label: "应用", display: "앱", alias: "app" },
+  { kind: "root_domain", label: "域名", display: "도메인", alias: "domain" },
+  { kind: "subdomain", label: "子域名", display: "서브도메인", alias: "subdomain" },
+  { kind: "service", label: "服务", display: "서비스", alias: "service" },
 ] as const;
 
 export type MentionKind = (typeof mentionKinds)[number]["kind"];

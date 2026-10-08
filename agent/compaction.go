@@ -462,7 +462,7 @@ func buildCompressionInput(g *coldGraph, b block, nodeByID map[int64]*db.Node) s
 		memberSet[m] = true
 	}
 	var sb strings.Builder
-	sb.WriteString("【成员节点（要压缩的）】：\n")
+	sb.WriteString("[멤버 노드(압축 대상)]:\n")
 	for _, m := range b.Members {
 		n := nodeByID[m]
 		kind := "fact"
@@ -485,18 +485,18 @@ func buildCompressionInput(g *coldGraph, b block, nodeByID map[int64]*db.Node) s
 	for _, m := range b.Members {
 		for _, to := range g.children[m] {
 			if memberSet[to] {
-				edgeLines = append(edgeLines, fmt.Sprintf("- #%d 产出/派生→ #%d", m, to))
+				edgeLines = append(edgeLines, fmt.Sprintf("- #%d 산출/파생→ #%d", m, to))
 			}
 		}
 	}
 	if len(edgeLines) > 0 {
-		sb.WriteString("\n【成员之间的血缘边（父→子）】：\n")
+		sb.WriteString("\n[멤버 간 혈연 간선(부모→자식)]:\n")
 		sort.Strings(edgeLines)
 		sb.WriteString(strings.Join(edgeLines, "\n"))
 		sb.WriteByte('\n')
 	}
 	if len(b.Anchors) > 0 {
-		sb.WriteString("\n【共同父 / 上下文锚（不是成员，只用于理解这些结果从哪个意图探出）】：\n")
+		sb.WriteString("\n[공통 부모 / 컨텍스트 앵커(멤버가 아니며, 이 결과들이 어느 의도에서 탐색되었는지 이해하는 용도)]:\n")
 		for _, a := range b.Anchors {
 			n := nodeByID[a]
 			state := ""
@@ -530,19 +530,19 @@ func (c *Compactor) compress(ctx context.Context, g *coldGraph, b block, nodeByI
 }
 
 // compressionSystemPrompt is the §4 body prompt.
-const compressionSystemPrompt = `你在压缩一组【彼此关联】的探索节点，产出一段综合结论(body)，供规划者快速掌握"这一片已经探明了什么"。
+const compressionSystemPrompt = `너는 [서로 연관된] 탐색 노드 묶음을 압축해, planner 가 "이 영역에서 무엇이 이미 밝혀졌는지"를 빠르게 파악하도록 종합 결론(body) 한 단락을 산출한다.
 
-输入是一个连通子图：
-- 节点：每条是一个意图或事实的 summary（一句话），带 id、类型(intent/fact)、state、confidence(若有)。
-- 关系：节点之间的血缘边（A 派生自 B / A 产出 B），说明它们如何串联。
-- 若节点间没有直接血缘边、但同属一个上游意图（会另给出该上游意图作为"共同父 #p"），则按"这个意图（#p）探到了什么"来综合它们——共同父只是上下文锚、不是要压缩的成员。
+입력은 하나의 연결된 서브그래프다:
+- 노드: 각각 하나의 의도 또는 사실의 summary(한 문장)이며, id, 유형(intent/fact), state, confidence(있는 경우)를 가진다.
+- 관계: 노드 간 혈연 간선(A가 B에서 파생 / A가 B를 산출)으로, 이들이 어떻게 이어지는지를 나타낸다.
+- 노드 간 직접 혈연 간선은 없지만 같은 상위 의도에 속하는 경우(그 상위 의도를 "공통 부모 #p"로 따로 제공함), "이 의도(#p)가 무엇을 탐색해냈는지" 기준으로 종합한다 —— 공통 부모는 컨텍스트 앵커일 뿐, 압축 대상 멤버가 아니다.
 
-据此写一段 body：
-1. 综合、不罗列：顺着关系把因果串起来（哪个事实催生哪个意图、哪条意图产出了哪个结论），讲成"这一片探索得出了什么"，不要把每条 summary 抄一遍。
-2. 保留区分度：彼此不同的结论分别说清，别揉成一句笼统的话。
-3. 保留证据强度：带 confidence 的结论标出 observed / inferred；inferred 的否定/存疑结论要点明它只是推断、可复核，别写成定论。
-4. 带上 id：每条结论后标注来源节点 id（如"…（#12,#28）"），让规划者能按 id 还原原节点。
-5. 正向陈述、只写输入里有的：不脑补、不引入输入中没有的判断。
-6. 长度随内容自适应：结论少就短，多且互不相同就写够——但整体显著短于所有输入 summary 的总和。
+이에 근거해 body 한 단락을 쓴다:
+1. 나열이 아닌 종합: 관계를 따라 인과를 엮어(어느 사실이 어느 의도를 낳았고, 어느 의도가 어느 결론을 산출했는지) "이 영역의 탐색이 무엇을 밝혀냈는지"로 서술하고, 각 summary 를 그대로 베끼지 않는다.
+2. 구분도 유지: 서로 다른 결론은 각각 명확히 밝히고, 하나의 뭉뚱그린 문장으로 섞지 않는다.
+3. 증거 강도 유지: confidence 가 있는 결론은 observed / inferred 를 표시한다. inferred 의 부정/의심 결론은 그것이 추론일 뿐이며 재검토 가능함을 명시하고, 단정으로 쓰지 않는다.
+4. id 포함: 각 결론 뒤에 출처 노드 id 를 표기해(예: "…(#12,#28)") planner 가 id 로 원 노드를 복원할 수 있게 한다.
+5. 긍정 서술, 입력에 있는 것만: 상상으로 채우지 말고, 입력에 없는 판단을 끌어들이지 않는다.
+6. 길이는 내용에 맞춰 조절: 결론이 적으면 짧게, 많고 서로 다르면 충분히 쓰되, 전체적으로 모든 입력 summary 의 총합보다 뚜렷이 짧게 한다.
 
-只输出 body 正文本身。`
+body 본문 자체만 출력한다.`
